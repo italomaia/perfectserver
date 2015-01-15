@@ -1,8 +1,21 @@
 #!/bin/sh
 
-DOMAIN=example.com
-MAILPASSWD=
+# The hostname for your mail server. This can be anything you like,
+# however, it should match the public hostname as specified by your
+# DNS records if you want to expose the server over the Internet.
+HOSTNAME=example.com
+
+# The password for the MySQL root user. You should pick something
+# unique and secure; but something you can remember.
 ROOTPASSWD=
+
+# The password for the MySQL mail user. You should pick something
+# unique and secure; you don’t even have to remember it beyond this
+# tutorial.
+MAILPASSWD=
+
+# The password for the administrator e-mail account that you’ll
+# create later in the guide.
 ADMINPASSWD=
 
 sudo su -
@@ -371,10 +384,10 @@ TLS_CACHESIZE=524288
 MAILDIRPATH=Maildir
 " > mv /etc/courier/pop3d-ssl
 
-openssl req -x509 -newkey rsa:1024 -keyout "/etc/ssl/private/mail.$DOMAIN.pem" -out "/etc/ssl/private/mail.$DOMAIN.pem" -nodes -days 3650
-openssl req -new -outform PEM -out "/etc/ssl/private/mail.$DOMAIN.crt" -newkey rsa:2048 -nodes -keyout "/etc/ssl/private/mail.$DOMAIN.key" -keyform PEM -days 3650 -x509
-chmod 640 /etc/ssl/private/mail.$DOMAIN.*
-chgrp ssl-cert /etc/ssl/private/mail.$DOMAIN.*
+openssl req -x509 -newkey rsa:1024 -keyout "/etc/ssl/private/mail.$HOSTNAME.pem" -out "/etc/ssl/private/mail.$HOSTNAME.pem" -nodes -days 3650
+openssl req -new -outform PEM -out "/etc/ssl/private/mail.$HOSTNAME.crt" -newkey rsa:2048 -nodes -keyout "/etc/ssl/private/mail.$HOSTNAME.key" -keyform PEM -days 3650 -x509
+chmod 640 /etc/ssl/private/mail.$HOSTNAME.*
+chgrp ssl-cert /etc/ssl/private/mail.$HOSTNAME.*
 
 echo "
 use strict;
