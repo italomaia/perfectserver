@@ -1,9 +1,15 @@
 #!/bin/sh
 
+# ------------------------------------------------------------------
+# This script is based in the post http://bit.ly/1ojD8oq by Adam
+# It creates a Mail Server configured with Postfix, Courier,
+# SSL/TLS, SpamAssassin, ClamAV and Amavis
+# ------------------------------------------------------------------
+
 # The hostname for your mail server. This can be anything you like,
 # however, it should match the public hostname as specified by your
 # DNS records if you want to expose the server over the Internet.
-HOSTNAME=example.com
+HOSTNAME=
 
 # The password for the MySQL root user. You should pick something
 # unique and secure; but something you can remember.
@@ -55,8 +61,8 @@ smtpd_sasl_local_domain =
 
 smtp_use_tls = yes
 smtpd_use_tls = yes
-smtpd_tls_cert_file = /etc/ssl/private/mail.example.com.crt
-smtpd_tls_key_file = /etc/ssl/private/mail.example.com.key
+smtpd_tls_cert_file = /etc/ssl/private/mail.$HOSTNAME.crt
+smtpd_tls_key_file = /etc/ssl/private/mail.$HOSTNAME.key
 smtpd_tls_session_cache_database = btree:\${data_directory}/smtpd_scache
 smtp_tls_session_cache_database = btree:\${data_directory}/smtp_scache
 
@@ -187,35 +193,35 @@ amavis    unix -        -       -       -       2       smtp
 mkdir /etc/postfix/maps
 echo "
 user = mail
-password = mailpassword
+password = $MAILPASSWD
 dbname = mail
 table = alias
 select_field = destination
 where_field = source
 hosts = 127.0.0.1
-additional_conditions = AND `enabled` = 1
-" > mkdir /etc/postfix/maps
+additional_conditions = AND \`enabled\` = 1
+" > /etc/postfix/maps/alias.cf
 
 echo "
 user = mail
-password = mailpassword
+password = $MAILPASSWD
 dbname = mail
 table = domain
 select_field = domain
 where_field = domain
 hosts = 127.0.0.1
-additional_conditions = AND `enabled` = 1
+additional_conditions = AND \`enabled\` = 1
 " > /etc/postfix/maps/domain.cf
 
 echo "
 user = mail
-password = mailpassword
+password = $MAILPASSWD
 dbname = mail
 table = user
-select_field = CONCAT(SUBSTRING_INDEX(`email`, "@", -1), "/", SUBSTRING_INDEX(`email`, "@", 1), "/")
+select_field = CONCAT(SUBSTRING_INDEX(\`email\`, \"@\", -1), \"/\", SUBSTRING_INDEX(\`email\`, \"@\", 1), \"/\")
 where_field = email
 hosts = 127.0.0.1
-additional_conditions = AND `enabled` = 1
+additional_conditions = AND \`enabled\` = 1
 " > /etc/postfix/maps/user.cf
 
 chmod 700 /etc/postfix/maps/*
@@ -231,7 +237,7 @@ mech_list: plain login
 sql_engine: mysql
 sql_hostnames: 127.0.0.1
 sql_user: mail
-sql_passwd: mailpassword
+sql_passwd: $MAILPASSWD
 sql_database: mail
 sql_select: SELECT \`password\` FROM \`user\` WHERE \`email\` = \"%u@%r\" AND \`enabled\` = 1
 " > /etc/postfix/sasl/smtpd.conf
@@ -250,8 +256,8 @@ OPTIONS=\"-r -c -m /var/spool/postfix/var/run/saslauthd\"
 " > /etc/default/saslauthd
 
 echo "
-auth    required   pam_mysql.so user=mail passwd=mailpassword host=127.0.0.1 db=mail table=user usercolumn=email passwdcolumn=password crypt=1
-account sufficient pam_mysql.so user=mail passwd=mailpassword host=127.0.0.1 db=mail table=user usercolumn=email passwdcolumn=password crypt=1
+auth    required   pam_mysql.so user=mail passwd=$MAILPASSWD host=127.0.0.1 db=mail table=user usercolumn=email passwdcolumn=password crypt=1
+account sufficient pam_mysql.so user=mail passwd=$MAILPASSWD host=127.0.0.1 db=mail table=user usercolumn=email passwdcolumn=password crypt=1
 " > /etc/pam.d/smtp
 
 chmod 700 /etc/postfix/sasl/smtpd.conf
@@ -273,7 +279,7 @@ mv /etc/courier/authmysqlrc{,.dist}
 echo "
 MYSQL_SERVER localhost
 MYSQL_USERNAME mail
-MYSQL_PASSWORD mailpassword
+MYSQL_PASSWORD $MAILPASSWD
 MYSQL_PORT 0
 MYSQL_DATABASE mail
 MYSQL_USER_TABLE user
@@ -294,18 +300,18 @@ PORT=143
 MAXDAEMONS=40
 MAXPERIP=20
 PIDFILE=/var/run/courier/imapd.pid
-TCPDOPTS="-nodnslookup -noidentlookup"
-LOGGEROPTS="-name=imapd"
-IMAP_CAPABILITY="IMAP4rev1 UIDPLUS CHILDREN NAMESPACE THREAD=ORDEREDSUBJECT THREAD=REFERENCES SORT QUOTA IDLE"
+TCPDOPTS=\"-nodnslookup -noidentlookup\"
+LOGGEROPTS=\"-name=imapd\"
+IMAP_CAPABILITY=\"IMAP4rev1 UIDPLUS CHILDREN NAMESPACE THREAD=ORDEREDSUBJECT THREAD=REFERENCES SORT QUOTA IDLE\"
 IMAP_KEYWORDS=1
 IMAP_ACL=1
-IMAP_CAPABILITY_ORIG="IMAP4rev1 UIDPLUS CHILDREN NAMESPACE THREAD=ORDEREDSUBJECT THREAD=REFERENCES SORT QUOTA AUTH=CRAM-MD5 AUTH=CRAM-SHA1 AUTH=CRAM-SHA256 IDLE"
+IMAP_CAPABILITY_ORIG=\"IMAP4rev1 UIDPLUS CHILDREN NAMESPACE THREAD=ORDEREDSUBJECT THREAD=REFERENCES SORT QUOTA AUTH=CRAM-MD5 AUTH=CRAM-SHA1 AUTH=CRAM-SHA256 IDLE\"
 IMAP_PROXY=0
 IMAP_PROXY_FOREIGN=0
 IMAP_IDLE_TIMEOUT=60
 IMAP_MAILBOX_SANITY_CHECK=1
-IMAP_CAPABILITY_TLS="$IMAP_CAPABILITY AUTH=PLAIN"
-IMAP_CAPABILITY_TLS_ORIG="$IMAP_CAPABILITY_ORIG AUTH=PLAIN"
+IMAP_CAPABILITY_TLS=\"$IMAP_CAPABILITY AUTH=PLAIN\"
+IMAP_CAPABILITY_TLS_ORIG=\"$IMAP_CAPABILITY_ORIG AUTH=PLAIN\"
 IMAP_DISABLETHREADSORT=0
 IMAP_CHECK_ALL_FOLDERS=0
 IMAP_OBSOLETE_CLIENT=0
@@ -328,7 +334,7 @@ echo "
 SSLPORT=993
 SSLADDRESS=0
 SSLPIDFILE=/var/run/courier/imapd-ssl.pid
-SSLLOGGEROPTS="-name=imapd-ssl"
+SSLLOGGEROPTS=\"-name=imapd-ssl\"
 IMAPDSSLSTART=YES
 IMAPDSTARTTLS=YES
 IMAP_TLS_REQUIRED=0
@@ -336,7 +342,7 @@ COURIERTLS=/usr/bin/couriertls
 TLS_KX_LIST=ALL
 TLS_COMPRESSION=ALL
 TLS_CERTS=X509
-TLS_CERTFILE=/etc/ssl/private/mail.example.com.pem
+TLS_CERTFILE=/etc/ssl/private/mail.$HOSTNAME.pem
 TLS_TRUSTCERTS=/etc/ssl/certs
 TLS_VERIFYPEER=NONE
 TLS_CACHEFILE=/var/lib/courier/couriersslcache
@@ -376,7 +382,7 @@ TLS_STARTTLS_PROTOCOL=TLS1
 TLS_KX_LIST=ALL
 TLS_COMPRESSION=ALL
 TLS_CERTS=X509
-TLS_CERTFILE=/etc/ssl/private/mail.example.com.pem
+TLS_CERTFILE=/etc/ssl/private/mail.$HOSTNAME.pem
 TLS_TRUSTCERTS=/etc/ssl/certs
 TLS_VERIFYPEER=NONE
 TLS_CACHEFILE=/var/lib/courier/couriersslcache
@@ -398,8 +404,8 @@ use strict;
 \$final_spam_destiny = D_DISCARD;
 \$pax = 'pax';
 
-@bypass_virus_checks_maps = (\%bypass_virus_checks, \@bypass_virus_checks_acl, \$bypass_virus_checks_re);
-@bypass_spam_checks_maps = (\%bypass_spam_checks, \@bypass_spam_checks_acl, \$bypass_spam_checks_re);
+@bypass_virus_checks_maps = (\\%bypass_virus_checks, \\@bypass_virus_checks_acl, \$bypass_virus_checks_re);
+@bypass_spam_checks_maps = (\\%bypass_spam_checks, \\@bypass_spam_checks_acl, \$bypass_spam_checks_re);
 @local_domains_acl = qw(.);
 
 1;
@@ -416,32 +422,39 @@ CRON=0
 dpkg-reconfigure clamav-freshclam
 
 mysql -u root --password=$ROOTPASSWORD -e "
-CREATE DATABASE `mail`;
-GRANT ALL ON `mail`.* TO "mail"@"localhost" IDENTIFIED BY "mailpassword";
+CREATE DATABASE \`mail\`;
+GRANT ALL ON \`mail\`.* TO \"mail\"@\"localhost\" IDENTIFIED BY \"$MAILPASSWD\";
 
 FLUSH PRIVILEGES;
-USE `mail`;
+USE \`mail\`;
 
 CREATE TABLE IF NOT EXISTS `alias` (
-  `source` VARCHAR(255) NOT NULL,
-  `destination` VARCHAR(255) NOT NULL DEFAULT "",
-  `enabled` TINYINT UNSIGNED NOT NULL DEFAULT 1,
-  PRIMARY KEY (`source`)
+  \`source\` VARCHAR(255) NOT NULL,
+  \`destination\` VARCHAR(255) NOT NULL DEFAULT \"\",
+  \`enabled\` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  PRIMARY KEY (\`source\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `domain` (
-  `domain` VARCHAR(255) NOT NULL DEFAULT "",
-  `transport` VARCHAR(255) NOT NULL DEFAULT "virtual:",
-  `enabled` TINYINT UNSIGNED NOT NULL DEFAULT 1,
-  PRIMARY KEY (`domain`)
+CREATE TABLE IF NOT EXISTS \`domain\` (
+  \`domain\` VARCHAR(255) NOT NULL DEFAULT \"\",
+  \`transport\` VARCHAR(255) NOT NULL DEFAULT \"virtual:\",
+  \`enabled\` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  PRIMARY KEY (\`domain\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `user` (
-  `email` VARCHAR(255) NOT NULL DEFAULT "",
-  `password` VARCHAR(255) NOT NULL DEFAULT "",
-  `name` VARCHAR(255) DEFAULT NULL,
-  `quota` INT UNSIGNED DEFAULT NULL,
-  `enabled` TINYINT UNSIGNED NOT NULL DEFAULT 1,
-  PRIMARY KEY (`email`)
+CREATE TABLE IF NOT EXISTS \`user\` (
+  \`email\` VARCHAR(255) NOT NULL DEFAULT \"\",
+  \`password\` VARCHAR(255) NOT NULL DEFAULT \"\",
+  \`name\` VARCHAR(255) DEFAULT NULL,
+  \`quota\` INT UNSIGNED DEFAULT NULL,
+  \`enabled\` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  PRIMARY KEY (\`email\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+"
+
+# inserting admin account
+mysql -u root --password=$ROOTPASSWORD -e "
+INSERT INTO \`domain\` (\`domain\`) VALUES (\"localhost\"), (\"localhost.localdomain\"), (\"$HOSTNAME\");
+INSERT INTO \`user\` (\`email\`, \`password\`, \`name\`) VALUES (\"admin@$HOSTNAME\", ENCRYPT(\"adminpassword\"), \"Administrator\");
+INSERT INTO \`alias\` (\`source\`, \`destination\`) VALUES (\"@localhost.localdomain\", \"@localhost\"), (\"@localhost\", \"admin@$HOSTNAME\");
 "
