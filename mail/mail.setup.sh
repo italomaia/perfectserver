@@ -9,7 +9,7 @@
 # The hostname for your mail server. This can be anything you like,
 # however, it should match the public hostname as specified by your
 # DNS records if you want to expose the server over the Internet.
-HOSTNAME=
+HOSTNAME=example.com
 
 # The password for the MySQL root user. You should pick something
 # unique and secure; but something you can remember.
@@ -428,7 +428,7 @@ GRANT ALL ON \`mail\`.* TO \"mail\"@\"localhost\" IDENTIFIED BY \"$MAILPASSWD\";
 FLUSH PRIVILEGES;
 USE \`mail\`;
 
-CREATE TABLE IF NOT EXISTS `alias` (
+CREATE TABLE IF NOT EXISTS \`alias\` (
   \`source\` VARCHAR(255) NOT NULL,
   \`destination\` VARCHAR(255) NOT NULL DEFAULT \"\",
   \`enabled\` TINYINT UNSIGNED NOT NULL DEFAULT 1,
