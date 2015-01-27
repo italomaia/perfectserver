@@ -71,8 +71,8 @@ smtp_tls_session_cache_database = btree:\${data_directory}/smtp_scache
 smtpd_helo_required = yes
 smtpd_delay_reject = yes
 disable_vrfy_command = yes
-smtpd_sender_restrictions = permit_sasl_authenticated, permit_mynetworks, reject
-smtpd_recipient_restrictions = permit_sasl_authenticated, permit_mynetworks, reject
+smtpd_sender_restrictions = permit_sasl_authenticated, permit_mynetworks, permit
+smtpd_recipient_restrictions = permit_sasl_authenticated, permit_mynetworks, reject_unauth_destination
 
 # Force incoming mail to go through Amavis
 
@@ -132,6 +132,7 @@ virtual   unix  -       n       n       -       -       virtual
 lmtp      unix  -       -       -       -       -       lmtp
 anvil     unix  -       -       -       -       1       anvil
 scache    unix  -       -       -       -       1       scache
+
 #
 # ====================================================================
 # Interfaces to non-Postfix software. Be sure to examine the manual
